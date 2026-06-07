@@ -16,6 +16,7 @@ class Opportunity(BaseModel):
     organization: str
     requirements: str
     type: Optional[str] = None
+    url: Optional[str] = None
 
 class AnalysisRequest(BaseModel):
     profile: UserProfile
