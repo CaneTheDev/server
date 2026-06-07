@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from app.api.endpoints import router as api_router
+from app.core.config import settings
 
 # Setup logging
 logging.basicConfig(
@@ -37,17 +38,24 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 # Enable CORS for frontend integration
-allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "")
-# Clean backticks, single quotes, and double quotes that might have been pasted accidentally
-allowed_origins = [
-    origin.strip().strip("`").strip("'").strip('"') 
-    for origin in allowed_origins_raw.split(",") 
-    if origin.strip()
-]
+allowed_origins = settings.ALLOWED_ORIGINS
 
-logger.info(f"CORS: Allowed origins configured: {allowed_origins}")
-if not allowed_origins:
-    logger.warning("CORS: No ALLOWED_ORIGINS found in environment. Cross-origin requests may fail.")
+# If in DEBUG mode and no origins are specified, allow common local development origins
+if settings.DEBUG and not allowed_origins:
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8000",
+    ]
+    logger.info(f"CORS: DEBUG mode active. Defaulting to local origins: {allowed_origins}")
+else:
+    logger.info(f"CORS: Allowed origins configured: {allowed_origins}")
+
+if not allowed_origins and not settings.DEBUG:
+    logger.warning("CORS: No ALLOWED_ORIGINS found in environment and DEBUG is False. Cross-origin requests will fail.")
 
 app.add_middleware(
     CORSMiddleware,

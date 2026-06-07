@@ -7,6 +7,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 class Settings:
+    DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
+    ALLOWED_ORIGINS_RAW: str = os.getenv("ALLOWED_ORIGINS", "")
+    
+    @property
+    def ALLOWED_ORIGINS(self) -> list[str]:
+        if not self.ALLOWED_ORIGINS_RAW:
+            return []
+        if self.ALLOWED_ORIGINS_RAW == "*":
+            return ["*"]
+        return [
+            origin.strip().strip("`").strip("'").strip('"') 
+            for origin in self.ALLOWED_ORIGINS_RAW.split(",") 
+            if origin.strip()
+        ]
+
     OPENROUTER_API_KEY_ELIGIBILITY: str = os.getenv("OPENROUTER_API_KEY_ELIGIBILITY", "").strip()
     OPENROUTER_API_KEY_NETWORKING: str = os.getenv("OPENROUTER_API_KEY_NETWORKING", "").strip()
     TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "").strip()
