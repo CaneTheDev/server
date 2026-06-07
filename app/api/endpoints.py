@@ -130,42 +130,74 @@ async def chat_coach(payload: ChatRequest):
             tools=tools
         )
 
-        # Handle potential tool calls
+        # Handle potential tool calls in a loop (up to max_loops to handle sequential tool steps)
         try:
-            # If content is a JSON string, it might be a message with tool_calls
-            if content.startswith('{') and '"tool_calls"' in content:
-                message_dict = json.loads(content)
-                if message_dict.get("tool_calls"):
-                    tool_calls = message_dict["tool_calls"]
-                    # Add assistant's tool call message to history
-                    history.append(message_dict)
+            loop_count = 0
+            max_loops = 5
+            while loop_count < max_loops:
+                if content.startswith('{') and '"tool_calls"' in content:
+                    try:
+                        message_dict = json.loads(content)
+                    except json.JSONDecodeError:
+                        break
                     
-                    for tool_call in tool_calls:
-                        function_name = tool_call["function"]["name"]
-                        try:
-                            arguments = json.loads(tool_call["function"]["arguments"])
-                        except json.JSONDecodeError:
-                            arguments = {}
+                    tool_calls = message_dict.get("tool_calls")
+                    if tool_calls:
+                        # Clean assistant message to only contain valid API fields
+                        assistant_msg = {
+                            "role": "assistant",
+                            "content": message_dict.get("content") or None,
+                            "tool_calls": tool_calls
+                        }
+                        history.append(assistant_msg)
                         
-                        if function_name == "tavily_search":
-                            logger.info(f"Executing tool: tavily_search with args: {arguments}")
-                            search_results = await tavily_search(**arguments)
+                        for tool_call in tool_calls:
+                            function_name = tool_call["function"]["name"]
+                            try:
+                                arguments = json.loads(tool_call["function"]["arguments"])
+                            except json.JSONDecodeError:
+                                arguments = {}
+                            
+                            if function_name == "tavily_search":
+                                logger.info(f"Executing tool: tavily_search with args: {arguments}")
+                                search_results = await tavily_search(**arguments)
+                                tool_content = json.dumps(search_results)
+                            else:
+                                logger.warning(f"Unknown tool call: {function_name}")
+                                tool_content = json.dumps({"error": f"Tool '{function_name}' is not supported."})
+                            
                             # Add tool response to history
                             history.append({
                                 "role": "tool",
                                 "tool_call_id": tool_call["id"],
                                 "name": function_name,
-                                "content": json.dumps(search_results)
+                                "content": tool_content
                             })
-                    
-                    # Second call with tool results
-                    content, reasoning_trace = await query_llm(
-                        system_instruction=system_content,
-                        user_prompt="",
-                        json_mode=False,
-                        history=history,
-                        tools=tools
-                    )
+                        
+                        # Query LLM again with tool results
+                        content, reasoning_trace = await query_llm(
+                            system_instruction=system_content,
+                            user_prompt="",
+                            json_mode=False,
+                            history=history,
+                            tools=tools
+                        )
+                        loop_count += 1
+                    else:
+                        break
+                else:
+                    break
+            
+            # Fallback if we exceeded max_loops and still have a tool call in content
+            if content.startswith('{') and '"tool_calls"' in content:
+                logger.warning("Exceeded max tool loops, forcing final call without tools.")
+                content, reasoning_trace = await query_llm(
+                    system_instruction=system_content + "\n\nPlease provide your final response directly without calling any tools.",
+                    user_prompt="",
+                    json_mode=False,
+                    history=history,
+                    tools=None
+                )
         except Exception as tool_err:
             logger.error(f"Error during tool execution loop: {str(tool_err)}")
             # Fallback: if tool execution fails, we might already have 'content' from the first call 
