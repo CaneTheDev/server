@@ -56,6 +56,9 @@ class DiscoveryRequest(BaseModel):
     user_interest: str
     academic_level: str
     location: str
+    major: Optional[str] = None
+    skills: Optional[List[str]] = []
+    cv_text: Optional[str] = None
     exclude_urls: Optional[List[str]] = []
 
 class DiscoveryOpportunity(BaseModel):
@@ -67,3 +70,4 @@ class DiscoveryOpportunity(BaseModel):
 
 class DiscoveryResponse(BaseModel):
     opportunities: List[DiscoveryOpportunity]
+    ai_comment: Optional[str] = None

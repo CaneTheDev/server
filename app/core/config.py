@@ -24,20 +24,26 @@ class Settings:
 
     OPENROUTER_API_KEY_ELIGIBILITY: str = os.getenv("OPENROUTER_API_KEY_ELIGIBILITY", "").strip()
     OPENROUTER_API_KEY_NETWORKING: str = os.getenv("OPENROUTER_API_KEY_NETWORKING", "").strip()
+    CEREBRAS_API_KEYS_RAW: str = os.getenv("CEREBRAS_API_KEYS", "").strip()
     TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "").strip()
     GITHUB_TOKEN: str = os.getenv("GITHUB_TOKEN", "").strip()
 
+    @property
+    def CEREBRAS_API_KEYS(self) -> list[str]:
+        if not self.CEREBRAS_API_KEYS_RAW:
+            return []
+        return [key.strip() for key in self.CEREBRAS_API_KEYS_RAW.split(",") if key.strip()]
+
+    # Provider Selection: "cerebras" or "openrouter"
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "openrouter").lower().strip()
+
     OPENROUTER_URL: str = "https://openrouter.ai/api/v1/chat/completions"
+    CEREBRAS_URL: str = "https://api.cerebras.ai/v1/chat/completions"
     GITHUB_SEARCH_URL: str = "https://api.github.com/search/users"
 
     # Target Models
-    MODEL_ELIGIBILITY: str = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
-    MODEL_NETWORKING: str = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
-    MODEL_PRIMARY: str = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
-    MODEL_ULTRA: str = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
-
-    # Fallbacks in case primary free models fail
-    MODEL_ELIGIBILITY_FALLBACK: str = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
-    MODEL_NETWORKING_FALLBACK: str = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+    MODEL_PRIMARY: str = os.getenv("MODEL_PRIMARY", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free").strip()
+    MODEL_ULTRA: str = os.getenv("MODEL_ULTRA", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free").strip()
+    CEREBRAS_MODEL: str = os.getenv("CEREBRAS_MODEL", "gpt-oss-120b").strip()
 
 settings = Settings()
