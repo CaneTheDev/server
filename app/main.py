@@ -37,8 +37,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 # Enable CORS for frontend integration
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
-allowed_origins = [origin.strip() for origin in allowed_origins if origin.strip()]
+allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "")
+allowed_origins = [origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()]
+
+logger.info(f"CORS: Allowed origins configured: {allowed_origins}")
+if not allowed_origins:
+    logger.warning("CORS: No ALLOWED_ORIGINS found in environment. Cross-origin requests may fail.")
 
 app.add_middleware(
     CORSMiddleware,
