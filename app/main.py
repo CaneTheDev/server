@@ -38,7 +38,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 # Enable CORS for frontend integration
 allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "")
-allowed_origins = [origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()]
+# Clean backticks, single quotes, and double quotes that might have been pasted accidentally
+allowed_origins = [
+    origin.strip().strip("`").strip("'").strip('"') 
+    for origin in allowed_origins_raw.split(",") 
+    if origin.strip()
+]
 
 logger.info(f"CORS: Allowed origins configured: {allowed_origins}")
 if not allowed_origins:
